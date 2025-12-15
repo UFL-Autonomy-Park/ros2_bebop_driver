@@ -373,6 +373,44 @@ eARCONTROLLER_ERROR didReceiveFrameCallback(
     return ARCONTROLLER_OK;
 }
 
+void Bebop::setMaxVerticalSpeed(double max_gaz_speed) {
+    ARSAL_PRINT(ARSAL_PRINT_INFO, TAG,
+            "Setting max vertical speed to %f m/s", max_gaz_speed);
+    throwOnInternalError("Set max vertical speed failed");
+    // Send command using ARSDK function
+    eARCONTROLLER_ERROR error = deviceController->aRDrone3->sendSpeedSettingsMaxVerticalSpeed(
+        deviceController->aRDrone3,
+        static_cast<float>(max_gaz_speed));
+    // Check for errors
+    throwOnCtrlError(error, "Set max vertical speed failed");
+}
+
+void Bebop::setMaxRotationSpeed(double max_yaw_speed) {
+    ARSAL_PRINT(ARSAL_PRINT_INFO, TAG,
+            "Setting max rotation speed to %f deg/s", max_yaw_speed);
+    throwOnInternalError("Set max rotation speed failed");
+    // Send command using ARSDK function
+    eARCONTROLLER_ERROR error = deviceController->aRDrone3->sendSpeedSettingsMaxRotationSpeed(
+        deviceController->aRDrone3,
+        static_cast<float>(max_yaw_speed));
+    // Check for errors
+    throwOnCtrlError(error, "Set max rotation speed failed");
+}
+
+void Bebop::setMaxTilt(double max_tilt) {
+    ARSAL_PRINT(ARSAL_PRINT_INFO, TAG,
+            "Setting max tilt to %f degrees", max_tilt);
+    throwOnInternalError("Set max tilt failed");
+
+    // Send command using ARSDK function
+    eARCONTROLLER_ERROR error = deviceController->aRDrone3->sendPilotingSettingsMaxTilt(
+        deviceController->aRDrone3,
+        static_cast<float>(max_tilt));
+
+    // Check for errors
+    throwOnCtrlError(error, "Set max tilt failed");
+}
+
 void Bebop::throwOnInternalError(const std::string& message) {
     if (!is_connected || !deviceController) throw std::runtime_error(message);
 }
@@ -390,4 +428,3 @@ void Bebop::throwOnDiscError(const eARDISCOVERY_ERROR& error,
 }
 
 }  // namespace bebop_driver
-

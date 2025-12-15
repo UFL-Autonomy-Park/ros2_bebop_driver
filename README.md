@@ -13,7 +13,7 @@ This work is based on the [bebop_autonomy](https://github.com/AutonomyLab/bebop_
 First you need to install some dependencies :
 
 ```
-sudo apt install ros-foxy-camera-info-manager libavdevice-dev
+sudo apt install ros-humble-camera-info-manager libavdevice-dev
 ```
 
 When building ros2_bebop_driver, we use the google repo tool which is asking a question at initialization. This will prevent colcon building from doing its job (since waiting for an answer to a question in the background). To skip this, you can 

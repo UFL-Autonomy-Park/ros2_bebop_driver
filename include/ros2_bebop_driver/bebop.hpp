@@ -100,6 +100,10 @@ class Bebop {
     bool isConnected(void) const;
     void disconnect(void);
 
+    void setMaxVerticalSpeed(double max_gaz_speed);
+    void setMaxRotationSpeed(double max_yaw_speed);
+    void setMaxTilt(double max_tilt);
+
     void takeOff(void);
     void land(void);
     void emergency(void);

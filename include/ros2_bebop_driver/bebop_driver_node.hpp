@@ -42,6 +42,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <std_msgs/msg/bool.hpp>
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/u_int8.hpp>
+#include <rclcpp/parameter.hpp>
+#include <rcl_interfaces/msg/set_parameters_result.hpp>
 
 #include "ros2_bebop_driver/bebop.hpp"
 namespace bebop_driver {
@@ -75,6 +77,10 @@ class BebopDriverNode : public rclcpp::Node {
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr publisher_odometry;
     rclcpp::TimerBase::SharedPtr odom_timer;
+
+    rcl_interfaces::msg::SetParametersResult parametersCallback(
+        const std::vector<rclcpp::Parameter>& parameters);
+    rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
 
     void publishCamera(void);
     void publishOdometry(void);

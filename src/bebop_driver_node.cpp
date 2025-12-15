@@ -71,9 +71,42 @@ BebopDriverNode::BebopDriverNode()
     auto bebop_ip = this->get_parameter("bebop_ip").as_string();
     auto bebop_port = this->get_parameter("bebop_port").as_int();
     RCLCPP_INFO(this->get_logger(), "Connecting to the bebop %s:%d",
-		bebop_ip.c_str(), bebop_port);
+		bebop_ip.c_str(), static_cast<int>(bebop_port));
     bebop->connect(bebop_ip, bebop_port);
     RCLCPP_INFO(this->get_logger(), "Connected");
+
+    auto max_vertical_speed_desc = rcl_interfaces::msg::ParameterDescriptor{};
+    max_vertical_speed_desc.description = "Max vertical speed in m/s";
+    rcl_interfaces::msg::FloatingPointRange float_range_vert;
+    float_range_vert.from_value = 0.5;
+    float_range_vert.to_value = 2.5;
+    max_vertical_speed_desc.floating_point_range.push_back(float_range_vert);
+    // Declare the parameter with a default value
+    this->declare_parameter("max_vertical_speed", 1.0,
+                max_vertical_speed_desc);
+
+    auto max_rotation_speed_desc = rcl_interfaces::msg::ParameterDescriptor{};
+    max_rotation_speed_desc.description = "Max rotation speed in deg/s";
+    rcl_interfaces::msg::FloatingPointRange float_range_rot;
+    float_range_rot.from_value = 10.0;
+    float_range_rot.to_value = 200.0;
+    max_rotation_speed_desc.floating_point_range.push_back(float_range_rot);
+    // Declare the parameter with a default value
+    this->declare_parameter("max_rotation_speed", 150.0,
+                max_rotation_speed_desc);
+
+    auto max_tilt_desc = rcl_interfaces::msg::ParameterDescriptor{};
+    max_tilt_desc.description = "Max tilt angle in degrees";
+    rcl_interfaces::msg::FloatingPointRange float_range_tilt;
+    float_range_tilt.from_value = 5.0;
+    float_range_tilt.to_value = 30.0; 
+    max_tilt_desc.floating_point_range.push_back(float_range_tilt);
+    // Declare the parameter with a default value 
+    this->declare_parameter("max_tilt_angle", 5.0, max_tilt_desc);
+    // Get parameter
+    double initial_tilt = this->get_parameter("max_tilt_angle").as_double();
+    RCLCPP_INFO(this->get_logger(), "Setting initial max_tilt_angle: %f", initial_tilt);
+    bebop->setMaxTilt(initial_tilt);
 
     // The core functions subscribers
     // For: TakeOff, Land, Emergency, flatTrim, navigateHome, animationFlip,
@@ -149,6 +182,11 @@ BebopDriverNode::BebopDriverNode()
 	this->create_publisher<nav_msgs::msg::Odometry>("odom", 10);
     odom_timer = this->create_wall_timer(
 	66ms, std::bind(&BebopDriverNode::publishOdometry, this));
+
+    // Set the parameters callback
+    param_callback_handle_ = this->add_on_set_parameters_callback(
+        std::bind(&BebopDriverNode::parametersCallback, this,
+                  std::placeholders::_1));
 }
 
 void BebopDriverNode::publishCamera(void) {
@@ -270,6 +308,88 @@ void BebopDriverNode::cmdVelCallback(
     double gaz_speed = msg->linear.z;
     double yaw_speed = -msg->angular.z;
     bebop->move(roll, pitch, gaz_speed, yaw_speed);
+}
+
+// Add this function definition somewhere in bebop_driver_node.cpp
+// within the bebop_driver namespace.
+
+rcl_interfaces::msg::SetParametersResult BebopDriverNode::parametersCallback(
+    const std::vector<rclcpp::Parameter> &parameters)
+{
+    rcl_interfaces::msg::SetParametersResult result;
+    result.successful = true; // Assume success initially
+    result.reason = "";
+
+    for (const auto &param : parameters) {
+        std::string param_name = param.get_name();
+
+        try {
+            if (param_name == "max_vertical_speed") {
+                if (param.get_type() != rclcpp::ParameterType::PARAMETER_DOUBLE) {
+                    result.successful = false;
+                    result.reason = "max_vertical_speed must be a double (float).";
+                    RCLCPP_ERROR(this->get_logger(), "%s", result.reason.c_str());
+                    continue; // Skip to next parameter
+                }
+                double speed_value = param.as_double();
+                // Optional: Add extra validation based on known drone limits if needed
+                if (speed_value < 0.5 || speed_value > 2.5) { // Example limits
+                     RCLCPP_WARN(this->get_logger(),
+                        "Requested max_vertical_speed %f is outside typical range [0.5, 2.5]", speed_value);
+                }
+                RCLCPP_INFO(this->get_logger(), "Setting max_vertical_speed to %f", speed_value);
+                bebop->setMaxVerticalSpeed(speed_value); // Call the function in bebop.cpp
+
+            } else if (param_name == "max_rotation_speed") {
+                 if (param.get_type() != rclcpp::ParameterType::PARAMETER_DOUBLE) {
+                    result.successful = false;
+                    result.reason = "max_rotation_speed must be a double (float).";
+                    RCLCPP_ERROR(this->get_logger(), "%s", result.reason.c_str());
+                    continue; // Skip to next parameter
+                }
+                double speed_value = param.as_double();
+                 // Optional: Add extra validation based on known drone limits if needed
+                 if (speed_value < 10.0 || speed_value > 200.0) { // Example limits
+                     RCLCPP_WARN(this->get_logger(),
+                        "Requested max_rotation_speed %f is outside typical range [10, 200]", speed_value);
+                }
+                RCLCPP_INFO(this->get_logger(), "Setting max_rotation_speed to %f", speed_value);
+                bebop->setMaxRotationSpeed(speed_value); // Call the function in bebop.cpp
+            } else if (param_name == "max_tilt_angle") {
+                 if (param.get_type() != rclcpp::ParameterType::PARAMETER_DOUBLE) {
+                    result.successful = false;
+                    result.reason = "max_tilt_angle must be a double (float).";
+                    RCLCPP_ERROR(this->get_logger(), "%s", result.reason.c_str());
+                    continue; 
+                }
+                double tilt_value = param.as_double();
+                 
+                 if (tilt_value < 5.0 || tilt_value > 30.0) { 
+                     RCLCPP_WARN(this->get_logger(),
+                        "Requested max_tilt_angle %f is outside typical range [5, 30]", tilt_value);
+                }
+                RCLCPP_INFO(this->get_logger(), "Setting max_tilt_angle to %f", tilt_value);
+                bebop->setMaxTilt(tilt_value); 
+            }
+            // Add else if blocks here if you add more controllable parameters later
+
+        } catch (const rclcpp::exceptions::ParameterUninitializedException &e) {
+             result.successful = false;
+             result.reason = "Parameter not initialized: " + std::string(e.what());
+             RCLCPP_ERROR(this->get_logger(), "%s", result.reason.c_str());
+        } catch (const rclcpp::exceptions::InvalidParameterTypeException &e) {
+             result.successful = false;
+             result.reason = "Invalid parameter type: " + std::string(e.what());
+             RCLCPP_ERROR(this->get_logger(), "%s", result.reason.c_str());
+        } catch (const std::runtime_error &e) {
+            // Catch errors from the bebop->set... calls (like SDK errors)
+            result.successful = false;
+            result.reason = "Failed to set parameter on drone: " + std::string(e.what());
+            RCLCPP_ERROR(this->get_logger(), "%s", result.reason.c_str());
+        }
+    } // End of loop through parameters
+
+    return result;
 }
 
 }  // namespace bebop_driver
