@@ -94,6 +94,10 @@ BebopDriverNode::BebopDriverNode()
     // Declare the parameter with a default value
     this->declare_parameter("max_rotation_speed", 150.0,
                 max_rotation_speed_desc);
+    // Get parameter
+    double initial_rot = this->get_parameter("max_rotation_speed").as_double();
+    RCLCPP_INFO(this->get_logger(), "Setting initial max_rotation_speed: %f", initial_rot);
+    bebop->setMaxRotationSpeed(initial_rot);
 
     auto max_tilt_desc = rcl_interfaces::msg::ParameterDescriptor{};
     max_tilt_desc.description = "Max tilt angle in degrees";
